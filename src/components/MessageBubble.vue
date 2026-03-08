@@ -23,33 +23,33 @@ const html = computed(() => {
 
 <template>
   <div class="flex gap-3" :class="isUser ? 'justify-end' : 'justify-start'">
-    <div v-if="!isUser" class="mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-white/6 text-sm font-bold text-white/82">
+    <div v-if="!isUser" class="surface-card mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl text-sm font-bold">
       {{ roleLabel.slice(0, 1) }}
     </div>
 
     <div class="max-w-[82%]">
       <div class="mb-2 flex items-center gap-2" :class="isUser ? 'justify-end' : 'justify-start'">
-        <span class="text-sm font-semibold text-white/86">{{ roleLabel }}</span>
-        <span class="text-sm text-white/34">{{ message.created_at_label || message.created_at || '' }}</span>
+        <span class="text-app-soft text-sm font-semibold">{{ roleLabel }}</span>
+        <span class="text-app-muted text-sm">{{ message.created_at_label || message.created_at || '' }}</span>
       </div>
 
       <div
         class="rounded-[22px] border px-4 py-3"
-        :class="isUser
-          ? 'border-blue-400/18 bg-[#16233f] text-white/92'
-          : 'border-white/7 bg-[#141922] text-white/88'"
+        :style="isUser
+          ? 'border: 1px solid color-mix(in srgb, var(--app-accent) 26%, var(--app-border)); background: color-mix(in srgb, var(--app-accent) 16%, var(--app-panel)); color: var(--app-text);'
+          : 'border: 1px solid color-mix(in srgb, var(--app-text) 6%, transparent); background: color-mix(in srgb, var(--app-panel-2) 92%, transparent); color: var(--app-text-soft);'"
       >
         <div class="markdown-body" v-html="html" />
         <div v-if="message.attachments?.length" class="mt-3 flex flex-wrap gap-2">
-          <div v-for="file in message.attachments" :key="file.id || file.path || file.filename" class="rounded-2xl border border-white/8 bg-white/4 px-3 py-2 text-sm text-white/70">
-            <div class="font-medium text-white/86">{{ file.filename || file.name || '附件' }}</div>
-            <div class="mt-1 text-white/40">{{ file.mime_type || file.media_kind || file.kind || 'file' }}</div>
+          <div v-for="file in message.attachments" :key="file.id || file.path || file.filename" class="surface-card rounded-2xl px-3 py-2 text-sm">
+            <div class="text-app font-medium">{{ file.filename || file.name || '附件' }}</div>
+            <div class="text-app-muted mt-1">{{ file.mime_type || file.media_kind || file.kind || 'file' }}</div>
           </div>
         </div>
       </div>
     </div>
 
-    <div v-if="isUser" class="mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-blue-500/20 text-xs font-bold text-blue-100">
+    <div v-if="isUser" class="mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl text-xs font-bold" style="background: color-mix(in srgb, var(--app-accent) 22%, transparent); color: white;">
       {{ roleLabel.slice(0, 1) }}
     </div>
   </div>

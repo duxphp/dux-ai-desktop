@@ -41,26 +41,26 @@ watch(draft, () => {
           <h3 class="text-xl font-semibold text-white/94">连接设置</h3>
           <p class="mt-2 text-sm text-white/46">保存你的 Dux AI 服务地址和 API Token。</p>
         </div>
-        <button class="rounded-2xl border border-white/8 bg-white/4 px-3 py-2 text-sm text-white/76 transition hover:bg-white/8" @click="emit('update:open', false)">关闭</button>
+        <button class="btn-muted rounded-2xl px-3 py-2 text-sm" @click="emit('update:open', false)">关闭</button>
       </div>
 
       <div class="mt-6 grid gap-4">
         <label class="text-xs font-medium text-white/42">服务器地址</label>
-        <input v-model="draft.serverUrl" class="rounded-2xl border border-white/8 bg-white/4 px-4 py-3 text-sm text-white/88 placeholder:text-white/32" placeholder="例如 http://127.0.0.1:8000" />
+        <input v-model="draft.serverUrl" class="field-base rounded-2xl px-4 py-3 text-sm" placeholder="例如 http://127.0.0.1:8000" />
 
         <label class="text-xs font-medium text-white/42">Token</label>
-        <input v-model="draft.token" type="password" class="rounded-2xl border border-white/8 bg-white/4 px-4 py-3 text-sm text-white/88 placeholder:text-white/32" placeholder="sk-..." />
+        <input v-model="draft.token" type="password" class="field-base rounded-2xl px-4 py-3 text-sm" placeholder="sk-..." />
 
-        <div v-if="lastTestMessage" class="rounded-2xl border border-white/8 bg-white/4 px-4 py-3 text-sm text-white/68">
+        <div v-if="lastTestMessage" class="field-surface rounded-2xl px-4 py-3 text-sm">
           {{ lastTestMessage }}
         </div>
       </div>
 
       <div class="mt-6 flex items-center justify-end gap-3">
-        <button class="rounded-2xl border border-white/8 bg-white/4 px-4 py-3 text-sm text-white/78 transition hover:bg-white/8 disabled:cursor-not-allowed disabled:opacity-55" :disabled="testing" @click="emit('test')">
+        <button class="btn-muted rounded-2xl px-4 py-3 text-sm disabled:cursor-not-allowed disabled:opacity-55" :disabled="testing" @click="emit('test')">
           {{ testing ? '连接中…' : '测试连接' }}
         </button>
-        <button class="rounded-2xl bg-[linear-gradient(180deg,#4a7cff_0%,#356df7_100%)] px-5 py-3 text-sm font-semibold text-white shadow-[0_10px_28px_rgba(53,109,247,0.26)] transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-55" :disabled="loading" @click="emit('save')">
+        <button class="btn-accent rounded-2xl px-5 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-55" :disabled="loading" @click="emit('save')">
           {{ loading ? '保存中…' : '保存' }}
         </button>
       </div>

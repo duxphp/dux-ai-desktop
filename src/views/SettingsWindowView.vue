@@ -21,8 +21,7 @@ onMounted(async () => {
         <label class="text-xs font-medium text-[color:var(--app-text-muted)]">服务器地址</label>
         <input
           :value="settings.form.serverUrl"
-          class="rounded-2xl px-4 py-3 text-sm text-[color:var(--app-text)] placeholder:text-[color:var(--app-text-muted)]"
-          style="border: 1px solid var(--app-border); background: color-mix(in srgb, var(--app-text) 4%, transparent);"
+          class="field-base rounded-2xl px-4 py-3 text-sm"
           placeholder="例如 http://127.0.0.1:8000"
           @input="settings.updateForm({ ...settings.form, serverUrl: ($event.target as HTMLInputElement).value })"
         >
@@ -31,16 +30,14 @@ onMounted(async () => {
         <input
           :value="settings.form.token"
           type="password"
-          class="rounded-2xl px-4 py-3 text-sm text-[color:var(--app-text)] placeholder:text-[color:var(--app-text-muted)]"
-          style="border: 1px solid var(--app-border); background: color-mix(in srgb, var(--app-text) 4%, transparent);"
+          class="field-base rounded-2xl px-4 py-3 text-sm"
           placeholder="sk-..."
           @input="settings.updateForm({ ...settings.form, token: ($event.target as HTMLInputElement).value })"
         >
 
         <div
           v-if="settings.lastTestMessage"
-          class="rounded-2xl px-4 py-3 text-sm text-[color:var(--app-text-soft)]"
-          style="border: 1px solid var(--app-border); background: color-mix(in srgb, var(--app-text) 4%, transparent);"
+          class="field-base rounded-2xl px-4 py-3 text-sm text-[color:var(--app-text-soft)]"
         >
           {{ settings.lastTestMessage }}
         </div>
@@ -48,15 +45,14 @@ onMounted(async () => {
 
       <div class="mt-6 flex items-center justify-end gap-3">
         <button
-          class="no-drag rounded-2xl px-4 py-3 text-sm transition disabled:cursor-not-allowed disabled:opacity-55"
-          style="border: 1px solid var(--app-border); background: color-mix(in srgb, var(--app-text) 4%, transparent); color: var(--app-text-soft);"
+          class="dialog-btn-muted no-drag px-4 py-3 disabled:cursor-not-allowed disabled:opacity-55"
           :disabled="settings.testing"
           @click="settings.testConnection"
         >
           {{ settings.testing ? '连接中…' : '测试连接' }}
         </button>
         <button
-          class="no-drag rounded-2xl bg-[linear-gradient(180deg,var(--app-accent)_0%,var(--app-accent-strong)_100%)] px-5 py-3 text-sm font-semibold text-white shadow-[0_10px_28px_rgba(53,109,247,0.26)] transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-55"
+          class="no-drag rounded-2xl bg-[linear-gradient(180deg,var(--app-accent)_0%,var(--app-accent-strong)_100%)] px-5 py-3 text-sm font-semibold text-white shadow-[0_10px_28px_rgba(53,109,247,0.26)] transition disabled:cursor-not-allowed disabled:opacity-55"
           :disabled="settings.saving"
           @click="saveSettings"
         >

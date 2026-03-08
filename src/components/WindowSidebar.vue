@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import dayjs from 'dayjs'
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 
 const props = defineProps<{
   sessions: any[]
@@ -14,15 +14,15 @@ const props = defineProps<{
 const emit = defineEmits<{
   createSession: []
   selectSession: [id: number]
-  renameSession: [payload: { id: number, title: string }]
-  deleteSession: [id: number]
   selectAgent: [code: string]
-  openSettings: []
 }>()
 
 const sortedSessions = computed(() => {
   return [...props.sessions].sort((a, b) => String(b.last_message_at || b.updated_at || '').localeCompare(String(a.last_message_at || a.updated_at || '')))
 })
+
+const activeAgent = computed(() => props.agents.find(item => item.id === props.activeAgentCode) || null)
+const showAgentPicker = ref(false)
 
 function formatTime(value?: string | null) {
   if (!value)
@@ -33,100 +33,105 @@ function formatTime(value?: string | null) {
   return date.format('MM/DD HH:mm')
 }
 
-function quickRename(session: any) {
-  const current = String(session.title || '')
-  const next = window.prompt('输入新的会话标题', current)
-  if (next !== null && next.trim() && next.trim() !== current) {
-    emit('renameSession', { id: Number(session.id), title: next.trim() })
-  }
+function chooseAgent(code: string) {
+  emit('selectAgent', code)
+  showAgentPicker.value = false
 }
 
-function quickDelete(session: any) {
-  if (window.confirm(`确认删除“${session.title || '未命名会话'}”吗？`)) {
-    emit('deleteSession', Number(session.id))
-  }
+function agentInitial(agent: any) {
+  const value = String(agent?.name || agent?.id || '?').trim()
+  return value.slice(0, 1).toUpperCase()
 }
 </script>
 
 <template>
   <aside class="flex h-full min-h-0 flex-col overflow-hidden px-4 py-4">
     <div class="mb-4 shrink-0 px-1">
-      <div class="text-sm font-semibold text-white/92">Dux AI</div>
-      <div class="mt-0.5 text-[11px] text-white/40">Desktop Client</div>
-    </div>
-
-    <div class="mb-4 shrink-0 px-1">
-      <div class="text-[11px] font-medium uppercase tracking-[0.24em] text-white/34">Workspace</div>
-      <div class="mt-2 text-lg font-semibold text-white/92">你的对话</div>
-      <div class="mt-1 text-sm text-white/45">一个整体化的桌面聊天壳层。</div>
+      <div class="text-base font-semibold text-app">Dux AI</div>
+      <div class="mt-0.5 text-sm text-app-muted">Desktop Client</div>
     </div>
 
     <div class="mb-4 shrink-0 space-y-3">
+      <label class="block text-xs font-medium text-app-muted">智能体</label>
+      <button class="btn-muted no-drag flex w-full items-center justify-between gap-3 rounded-[16px] px-4 py-3 text-left" @click="showAgentPicker = true">
+        <div class="flex min-w-0 items-center gap-3">
+          <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-[color:color-mix(in_srgb,var(--app-accent)_14%,transparent)] text-sm font-semibold text-[color:var(--app-accent)]">
+            {{ agentInitial(activeAgent) }}
+          </div>
+          <div class="min-w-0">
+            <div class="truncate text-sm font-medium text-app">{{ activeAgent?.name || '选择智能体' }}</div>
+            <div class="mt-1 truncate text-xs text-app-muted">{{ activeAgent?.description || activeAgent?.id || '点击切换智能体' }}</div>
+          </div>
+        </div>
+        <div class="text-app-muted">›</div>
+      </button>
+
       <button
-        class="no-drag w-full rounded-2xl bg-[linear-gradient(180deg,#4a7cff_0%,#356df7_100%)] px-4 py-3 text-sm font-semibold text-white shadow-[0_10px_30px_rgba(53,109,247,0.3)] transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-55"
+        class="btn-accent no-drag w-full rounded-[14px] px-4 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-55"
         :disabled="!configured || loading"
         @click="emit('createSession')"
       >
         新建会话
       </button>
-
-      <label class="block text-xs font-medium text-white/42">智能体</label>
-      <div class="rounded-2xl border border-white/8 bg-white/4 px-3 py-2.5">
-        <select
-          class="no-drag w-full bg-transparent text-sm text-white/88"
-          :value="activeAgentCode"
-          :disabled="!agents.length || loading"
-          @change="emit('selectAgent', ($event.target as HTMLSelectElement).value)"
-        >
-          <option v-for="agent in agents" :key="agent.id" :value="agent.id" class="bg-[#0f1218]">
-            {{ agent.name || agent.id }}
-          </option>
-        </select>
-      </div>
     </div>
 
-    <div class="h-0 flex-1 overflow-hidden">
-      <div class="mb-3 shrink-0 px-1 text-xs font-medium text-white/42">会话</div>
+    <div class="min-h-0 flex-1 overflow-hidden">
+      <div class="mb-3 shrink-0 px-1 text-xs font-medium text-app-muted">会话</div>
       <div class="scrollbar-thin h-[calc(100%-1.75rem)] overflow-auto pr-1">
         <div class="space-y-2 pb-2">
-          <div v-if="!configured" class="grid min-h-32 place-items-center rounded-3xl border border-white/6 bg-white/3 px-5 text-center text-sm text-white/42">
-            先在左下角配置服务器地址与 Token。
+          <div v-if="!configured" class="empty-card grid min-h-32 place-items-center rounded-[14px] px-5 text-center text-sm">
+            请先在右上角打开设置并配置连接。
           </div>
-          <div v-else-if="loading" class="grid min-h-32 place-items-center rounded-3xl border border-white/6 bg-white/3 px-5 text-center text-sm text-white/42">
+          <div v-else-if="loading" class="empty-card grid min-h-32 place-items-center rounded-[14px] px-5 text-center text-sm">
             正在加载会话…
           </div>
 
-          <div
+          <button
             v-for="session in sortedSessions"
             :key="session.id"
-            class="no-drag w-full rounded-3xl border px-4 py-3 transition"
-            :class="activeSessionId === session.id
-              ? 'border-white/12 bg-white/9 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]'
-              : 'border-transparent bg-white/[0.035] hover:border-white/8 hover:bg-white/[0.06]'"
+            class="session-card no-drag flex w-full items-center gap-3 rounded-[14px] px-4 py-3 text-left"
+            :class="activeSessionId === session.id ? 'session-card-active' : ''"
+            @click="emit('selectSession', session.id)"
           >
-            <button class="w-full text-left" @click="emit('selectSession', session.id)">
-              <div class="flex items-start justify-between gap-3">
-                <div class="min-w-0 flex-1">
-                  <div class="truncate text-sm font-medium text-white/90">{{ session.title || '未命名会话' }}</div>
-                  <div class="mt-1 text-xs text-white/42">{{ session.total_tokens || 0 }} tokens</div>
-                </div>
-                <div class="shrink-0 text-xs text-white/34">{{ formatTime(session.last_message_at || session.updated_at) }}</div>
-              </div>
-            </button>
-            <div class="mt-3 flex gap-2">
-              <button class="rounded-xl border border-white/8 bg-white/4 px-3 py-1.5 text-xs text-white/66 transition hover:bg-white/10" @click.stop="quickRename(session)">重命名</button>
-              <button class="rounded-xl border border-red-400/12 bg-red-500/8 px-3 py-1.5 text-xs text-red-200 transition hover:bg-red-500/14" @click.stop="quickDelete(session)">删除</button>
+            <div class="min-w-0 flex-1">
+              <div class="truncate text-sm font-medium text-app">{{ session.title || '未命名会话' }}</div>
             </div>
-          </div>
+            <div class="shrink-0 text-xs text-app-muted">{{ formatTime(session.last_message_at || session.updated_at) }}</div>
+          </button>
         </div>
       </div>
     </div>
 
-    <div class="mt-4 shrink-0 border-t border-white/6 pt-4">
-      <button class="no-drag w-full rounded-2xl border border-white/8 bg-white/4 px-4 py-3 text-left transition hover:bg-white/8" @click="emit('openSettings')">
-        <div class="text-sm font-medium text-white/88">配置</div>
-        <div class="mt-1 text-xs text-white/42">服务器地址 / Token</div>
-      </button>
+    <div v-if="showAgentPicker" class="no-drag absolute inset-0 z-40 grid place-items-center bg-black/28 backdrop-blur-sm">
+      <div class="dialog-panel w-full max-w-md rounded-[14px] px-5 py-5">
+        <div class="text-app text-lg font-semibold">切换智能体</div>
+        <p class="text-app-muted mt-2 text-sm">选择要使用的智能体。</p>
+
+        <div class="mt-5 space-y-2">
+          <button
+            v-for="agent in agents"
+            :key="agent.id"
+            class="session-card flex w-full items-center justify-between gap-3 rounded-[16px] px-4 py-3 text-left"
+            :class="activeAgentCode === agent.id ? 'session-card-active' : ''"
+            @click="chooseAgent(agent.id)"
+          >
+            <div class="flex min-w-0 flex-1 items-center gap-3">
+              <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-[color:color-mix(in_srgb,var(--app-accent)_14%,transparent)] text-sm font-semibold text-[color:var(--app-accent)]">
+                {{ agentInitial(agent) }}
+              </div>
+              <div class="min-w-0 flex-1">
+                <div class="truncate text-sm font-medium text-app">{{ agent.name || agent.id }}</div>
+                <div class="text-app-muted mt-1 truncate text-xs">{{ agent.description || agent.id }}</div>
+              </div>
+            </div>
+            <div v-if="activeAgentCode === agent.id" class="rounded-full px-2 py-1 text-[11px] font-medium text-[color:var(--app-accent)] bg-[color:color-mix(in_srgb,var(--app-accent)_12%,transparent)]">当前</div>
+          </button>
+        </div>
+
+        <div class="mt-5 flex justify-end gap-3">
+          <button class="dialog-btn-muted" @click="showAgentPicker = false">取消</button>
+        </div>
+      </div>
     </div>
   </aside>
 </template>
