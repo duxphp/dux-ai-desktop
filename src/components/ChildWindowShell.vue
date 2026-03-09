@@ -19,7 +19,7 @@ const panelClass = computed(() => isMacLike
       <div v-if="!isMacLike" class="absolute right-3 top-3 z-20 no-drag">
         <button
           type="button"
-          class="btn-ghost no-drag flex h-8 w-8 items-center justify-center rounded-[10px]"
+          class="window-win-button window-win-close no-drag flex h-[38px] w-[46px] items-center justify-center rounded-none"
           aria-label="关闭窗口"
           @mousedown.stop.prevent
           @click="closeWindow"
@@ -29,7 +29,7 @@ const panelClass = computed(() => isMacLike
       </div>
       <div
         class="shrink-0 border-b border-app px-6 pb-6"
-        :class="isMacLike ? 'pt-9' : 'pt-4'"
+        :class="isMacLike ? 'pt-9' : 'pt-6'"
         data-tauri-drag-region
       >
         <h1 class="text-app text-xl font-semibold">{{ title }}</h1>
