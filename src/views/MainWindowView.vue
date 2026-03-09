@@ -20,7 +20,7 @@ const booting = computed(() => chat.booting)
 const activeSession = computed(() => chat.activeSession)
 const rootClass = computed(() => 'p-0')
 const shellClass = computed(() => isMacLike
-  ? 'mac-native-shell rounded-none border-0 shadow-none'
+  ? 'glass-shell mac-native-shell rounded-none border-0 shadow-none'
   : 'windows-native-shell rounded-none border-0 shadow-none')
 
 const renameOpen = ref(false)
@@ -136,7 +136,7 @@ onMounted(async () => {
 
 <template>
   <div class="relative h-full w-full overflow-hidden bg-transparent text-app-text" :class="rootClass" @contextmenu="handleRootContextMenu">
-    <div class="glass-shell relative flex h-full w-full flex-col overflow-hidden" :class="shellClass">
+    <div class="relative flex h-full w-full flex-col overflow-hidden" :class="shellClass">
       <header
         v-if="isMacLike"
         class="relative h-[40px] shrink-0"
@@ -160,7 +160,7 @@ onMounted(async () => {
         <div class="min-w-0" data-tauri-drag-region>
           <div class="truncate text-sm font-semibold text-[color:var(--app-text)]">Dux AI</div>
         </div>
-        <div class="flex items-center gap-1 no-drag" data-tauri-drag-region>
+        <div class="flex items-center gap-1 no-drag">
           <button class="btn-ghost flex h-8 w-8 items-center justify-center" aria-label="打开关于" @click="openAboutWindow">
             <IconInfoCircle class="h-5 w-5" stroke="1.9" />
           </button>

@@ -8,13 +8,13 @@ defineProps<{
 }>()
 
 const panelClass = computed(() => isMacLike
-  ? 'rounded-none border-0 shadow-none'
+  ? 'glass-shell rounded-none border-0 shadow-none'
   : 'windows-native-shell m-0 rounded-none border-0 shadow-none')
 </script>
 
 <template>
   <div class="h-full w-full overflow-hidden bg-transparent text-app-text">
-    <div class="glass-shell flex h-full flex-col overflow-hidden" :class="panelClass">
+    <div class="flex h-full flex-col overflow-hidden" :class="panelClass">
       <div class="shrink-0 border-b border-app p-6" data-tauri-drag-region>
         <h1 class="text-app text-xl font-semibold">{{ title }}</h1>
         <p v-if="description" class="text-app-muted mt-1 text-sm">{{ description }}</p>

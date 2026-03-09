@@ -240,10 +240,6 @@ fn configure_child_window(window: &WebviewWindow) -> tauri::Result<()> {
     {
         configure_macos_window(window, false, false)?;
     }
-    #[cfg(target_os = "windows")]
-    {
-        apply_windows_mica(window)?;
-    }
     #[cfg(all(not(target_os = "macos"), not(target_os = "windows")))]
     {
         window.set_decorations(false)?;
