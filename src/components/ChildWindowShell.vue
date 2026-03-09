@@ -28,8 +28,8 @@ const panelClass = computed(() => isMacLike
         </button>
       </div>
       <div
-        class="shrink-0 border-b border-app px-6 pb-6"
-        :class="isMacLike ? 'pt-9' : 'pt-6'"
+        class="shrink-0 border-b border-app px-6 "
+        :class="isMacLike ? 'pt-9 pb-6' : 'py-4'"
         data-tauri-drag-region
       >
         <h1 class="text-app text-xl font-semibold">{{ title }}</h1>
