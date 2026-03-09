@@ -236,9 +236,13 @@ fn apply_windows_mica(window: &WebviewWindow) -> tauri::Result<()> {
 }
 
 fn configure_child_window(_window: &WebviewWindow) -> tauri::Result<()> {
+    #[cfg(target_os = "windows")]
+    {
+        apply_windows_mica(_window)?;
+    }
     #[cfg(target_os = "macos")]
     {
-        configure_macos_window(_window, false, false)?;
+        configure_macos_window(_window, true, false)?;
     }
     #[cfg(all(not(target_os = "macos"), not(target_os = "windows")))]
     {
@@ -279,10 +283,19 @@ async fn open_app_window(app: AppHandle, request: OpenAppWindowRequest) -> Resul
 
     #[cfg(target_os = "windows")]
     {
-        builder = builder.transparent(false).decorations(true);
+        builder = builder.transparent(true).decorations(false);
     }
 
-    #[cfg(not(target_os = "windows"))]
+    #[cfg(target_os = "macos")]
+    {
+        builder = builder
+            .transparent(true)
+            .decorations(true)
+            .hidden_title(true)
+            .title_bar_style(tauri::TitleBarStyle::Overlay);
+    }
+
+    #[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
     {
         builder = builder.transparent(true).decorations(false);
     }
