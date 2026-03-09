@@ -15,7 +15,7 @@ const panelClass = computed(() => isMacLike
 <template>
   <div class="h-full w-full overflow-hidden bg-transparent text-app-text">
     <div class="glass-shell flex h-full flex-col overflow-hidden" :class="panelClass">
-      <div class="shrink-0 border-b border-app p-6 pt-9" data-tauri-drag-region>
+      <div class="shrink-0 border-b border-app p-6" data-tauri-drag-region>
         <h1 class="text-app text-xl font-semibold">{{ title }}</h1>
         <p v-if="description" class="text-app-muted mt-1 text-sm">{{ description }}</p>
       </div>

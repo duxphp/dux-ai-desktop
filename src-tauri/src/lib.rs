@@ -284,11 +284,6 @@ async fn open_app_window(app: AppHandle, request: OpenAppWindowRequest) -> Resul
         .resizable(definition.resizable)
         .skip_taskbar(true);
 
-    #[cfg(target_os = "macos")]
-    {
-        builder = builder.hidden_title(true).title_bar_style(tauri::TitleBarStyle::Overlay);
-    }
-
     builder = builder
         .title(&definition.title)
         .inner_size(definition.width, definition.height);
