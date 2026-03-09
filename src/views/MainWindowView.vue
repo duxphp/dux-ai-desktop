@@ -156,15 +156,15 @@ onMounted(async () => {
         v-else
         class="relative flex h-[38px] shrink-0 items-center pl-3"
       >
-        <div class="min-w-0 shrink-0 opacity-0 pointer-events-none select-none">
+        <div class="min-w-0 shrink-0">
           <div class="truncate text-sm font-semibold text-[color:var(--app-text)]">Dux AI</div>
         </div>
         <div class="min-w-0 flex-1 self-stretch" data-tauri-drag-region />
         <div class="relative z-20 flex h-full items-stretch no-drag pointer-events-auto">
-          <button type="button" class="btn-ghost mt-[2px] flex h-8 w-8 items-center justify-center self-start" aria-label="打开关于" @mousedown.stop.prevent @click="openAboutWindow">
+          <button type="button" class="btn-ghost mt-[4px] flex h-8 w-8 items-center justify-center self-start" aria-label="打开关于" @mousedown.stop.prevent @click="openAboutWindow">
             <IconInfoCircle class="h-5 w-5" stroke="1.9" />
           </button>
-          <button type="button" class="btn-ghost mt-[2px] flex h-8 w-8 items-center justify-center self-start" aria-label="打开设置" @mousedown.stop.prevent @click="openSettingsWindow">
+          <button type="button" class="btn-ghost mt-[4px] flex h-8 w-8 items-center justify-center self-start" aria-label="打开设置" @mousedown.stop.prevent @click="openSettingsWindow">
             <IconSettings class="h-5 w-5" stroke="1.9" />
           </button>
           <DesktopWindowControls compact />

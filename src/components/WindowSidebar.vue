@@ -3,6 +3,7 @@ import { IconPlus } from '@tabler/icons-vue'
 import dayjs from 'dayjs'
 import { computed, ref } from 'vue'
 import { showNativeContextMenu } from '../lib/native-menu'
+import { isMacLike } from '../lib/window'
 
 const props = defineProps<{
   sessions: any[]
@@ -63,7 +64,7 @@ async function openSessionContextMenu(event: MouseEvent, session: any) {
 
 <template>
   <aside class="flex h-full min-h-0 flex-col overflow-hidden px-4 py-4">
-    <div class="mb-4 shrink-0 px-1">
+    <div v-if="isMacLike" class="mb-4 shrink-0 px-1">
       <div class="text-base font-semibold text-app">Dux AI</div>
       <div class="mt-0.5 text-sm text-app-muted">Desktop Client</div>
     </div>
