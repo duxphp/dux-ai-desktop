@@ -164,6 +164,12 @@
     -webkit-backdrop-filter: none;
   }
 
+  .windows-native-shell {
+    background: transparent;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
   .chat-canvas {
     background: linear-gradient(180deg, var(--app-panel) 0%, var(--app-panel-2) 100%);
   }

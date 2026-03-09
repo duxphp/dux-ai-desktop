@@ -199,6 +199,7 @@ fn emit_stream_end(app: &AppHandle, window_label: &str, stream_id: &str) {
     }
 }
 
+#[cfg(target_os = "macos")]
 fn configure_macos_window(window: &WebviewWindow, clear_title: bool, movable_by_background: bool) -> tauri::Result<()> {
     window.set_decorations(true)?;
     if clear_title {
@@ -210,8 +211,6 @@ fn configure_macos_window(window: &WebviewWindow, clear_title: bool, movable_by_
             .state(EffectState::Active)
             .build(),
     )?;
-
-    #[cfg(target_os = "macos")]
     window.with_webview(move |webview| unsafe {
         let ns_window: &NSWindow = &*webview.ns_window().cast();
 
@@ -225,14 +224,30 @@ fn configure_macos_window(window: &WebviewWindow, clear_title: bool, movable_by_
     Ok(())
 }
 
+#[cfg(target_os = "windows")]
+fn configure_windows_window(window: &WebviewWindow) -> tauri::Result<()> {
+    window.set_decorations(false)?;
+    window.set_effects(
+        EffectsBuilder::new()
+            .effect(Effect::Mica)
+            .state(EffectState::Active)
+            .build(),
+    )?;
+    Ok(())
+}
+
 fn configure_child_window(window: &WebviewWindow) -> tauri::Result<()> {
     #[cfg(target_os = "macos")]
     {
         configure_macos_window(window, false, false)?;
     }
-    #[cfg(not(target_os = "macos"))]
+    #[cfg(target_os = "windows")]
     {
-        let _ = window;
+        configure_windows_window(window)?;
+    }
+    #[cfg(all(not(target_os = "macos"), not(target_os = "windows")))]
+    {
+        window.set_decorations(false)?;
     }
     Ok(())
 }
@@ -259,7 +274,7 @@ async fn open_app_window(app: AppHandle, request: OpenAppWindowRequest) -> Resul
         .map_err(|error| error.to_string())?
         .center()
         .transparent(true)
-        .decorations(true)
+        .decorations(false)
         .shadow(true)
         .visible(true)
         .focused(true)
@@ -528,6 +543,10 @@ pub fn run() {
             #[cfg(target_os = "macos")]
             if let Some(window) = app.get_webview_window("main") {
                 configure_macos_window(&window, true, false)?;
+            }
+            #[cfg(target_os = "windows")]
+            if let Some(window) = app.get_webview_window("main") {
+                configure_windows_window(&window)?;
             }
             Ok(())
         })

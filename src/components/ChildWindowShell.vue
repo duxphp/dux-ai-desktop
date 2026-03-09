@@ -9,7 +9,7 @@ defineProps<{
 
 const panelClass = computed(() => isMacLike
   ? 'rounded-none border-0 shadow-none'
-  : 'm-2 rounded-[24px] border border-white/10 shadow-[0_20px_60px_rgba(0,0,0,0.22)]')
+  : 'windows-native-shell m-0 rounded-none border-0 shadow-none')
 </script>
 
 <template>

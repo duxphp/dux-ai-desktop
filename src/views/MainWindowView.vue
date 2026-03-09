@@ -18,10 +18,10 @@ const ready = computed(() => settings.ready)
 const configured = computed(() => settings.configured)
 const booting = computed(() => chat.booting)
 const activeSession = computed(() => chat.activeSession)
-const rootClass = computed(() => isMacLike ? 'p-0' : 'p-1.5')
+const rootClass = computed(() => 'p-0')
 const shellClass = computed(() => isMacLike
   ? 'mac-native-shell rounded-none border-0 shadow-none'
-  : 'rounded-[32px] border border-[color:var(--app-border)]')
+  : 'windows-native-shell rounded-none border-0 shadow-none')
 
 const renameOpen = ref(false)
 const deleteOpen = ref(false)
@@ -136,14 +136,6 @@ onMounted(async () => {
 
 <template>
   <div class="relative h-full w-full overflow-hidden bg-transparent text-app-text" :class="rootClass" @contextmenu="handleRootContextMenu">
-    <div
-      v-if="!isMacLike"
-      class="pointer-events-none absolute inset-0"
-      :style="{
-        background: 'radial-gradient(circle at 12% 18%, var(--app-glow-a), transparent 24%), radial-gradient(circle at 88% 14%, var(--app-glow-b), transparent 22%), radial-gradient(circle at 50% 100%, var(--app-glow-c), transparent 30%)'
-      }"
-    />
-
     <div class="glass-shell relative flex h-full w-full flex-col overflow-hidden" :class="shellClass">
       <header
         v-if="isMacLike"
