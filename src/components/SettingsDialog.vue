@@ -45,10 +45,10 @@ watch(draft, () => {
       </div>
 
       <div class="mt-6 grid gap-4">
-        <label class="text-xs font-medium text-white/42">服务器地址</label>
+        <label class="text-sm font-medium text-white/42">服务器地址</label>
         <input v-model="draft.serverUrl" class="field-base rounded-2xl px-4 py-3 text-sm" placeholder="例如 http://127.0.0.1:8000" />
 
-        <label class="text-xs font-medium text-white/42">Token</label>
+        <label class="text-sm font-medium text-white/42">Token</label>
         <input v-model="draft.token" type="password" class="field-base rounded-2xl px-4 py-3 text-sm" placeholder="sk-..." />
 
         <div v-if="lastTestMessage" class="field-surface rounded-2xl px-4 py-3 text-sm">

@@ -20,22 +20,26 @@
 
   :root {
     color-scheme: light;
-    --app-text: rgba(39, 39, 42, 0.96);
-    --app-text-soft: rgba(63, 63, 70, 0.88);
-    --app-text-muted: rgba(113, 113, 122, 0.82);
+    --app-text: rgba(24, 24, 27, 0.98);
+    --app-text-soft: rgba(39, 39, 42, 0.92);
+    --app-text-muted: rgba(82, 82, 91, 0.86);
     --app-border: rgba(63, 63, 70, 0.10);
     --app-border-strong: rgba(63, 63, 70, 0.16);
     --app-surface: rgba(244, 244, 245, 0.78);
     --app-surface-strong: rgba(250, 250, 250, 0.92);
     --app-panel: #fafafa;
     --app-panel-2: #f4f4f5;
-    --app-accent: #10b981;
-    --app-accent-strong: #059669;
+    --app-accent: #059669;
+    --app-accent-strong: #047857;
     --app-danger: #ef4444;
     --app-shadow: 0 20px 50px rgba(24, 24, 27, 0.10);
     --app-glow-a: rgba(16, 185, 129, 0.10);
     --app-glow-b: rgba(34, 197, 94, 0.08);
     --app-glow-c: rgba(113, 113, 122, 0.08);
+    --app-accent-surface: rgba(16, 185, 129, 0.14);
+    --app-accent-surface-strong: rgba(5, 150, 105, 0.18);
+    --app-accent-surface: rgba(5, 150, 105, 0.14);
+    --app-accent-surface-strong: rgba(4, 120, 87, 0.18);
   }
 
   :root.dark {
@@ -49,13 +53,15 @@
     --app-surface-strong: rgba(24, 24, 27, 0.92);
     --app-panel: #18181b;
     --app-panel-2: #111113;
-    --app-accent: #10b981;
-    --app-accent-strong: #059669;
+    --app-accent: #059669;
+    --app-accent-strong: #047857;
     --app-danger: #f87171;
     --app-shadow: 0 24px 64px rgba(0, 0, 0, 0.28);
     --app-glow-a: rgba(16, 185, 129, 0.12);
     --app-glow-b: rgba(52, 211, 153, 0.08);
     --app-glow-c: rgba(113, 113, 122, 0.08);
+    --app-accent-surface: rgba(5, 150, 105, 0.14);
+    --app-accent-surface-strong: rgba(4, 120, 87, 0.18);
   }
 
   body {
@@ -208,6 +214,18 @@
     color: var(--app-accent-strong);
   }
 
+  .message-media-image {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  .message-media-video {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
   .markdown-body code:not(pre code) {
     @apply rounded-md px-1.5 py-0.5 text-[13px];
     background: color-mix(in srgb, var(--app-text) 8%, transparent);
@@ -235,7 +253,7 @@
     border: 1px solid var(--app-border);
     background: color-mix(in srgb, var(--app-text) 4%, transparent);
     color: var(--app-text-soft);
-    transition: background-color 180ms ease, color 180ms ease, border-color 180ms ease, transform 180ms ease;
+    transition: background-color 180ms ease, color 180ms ease, border-color 180ms ease;
   }
 
   .btn-muted:hover {
@@ -244,15 +262,12 @@
     border-color: var(--app-border-strong);
   }
 
-  .btn-muted:active {
-    transform: translateY(1px) scale(0.98);
-  }
 
   .btn-accent {
     border: 1px solid transparent;
     background: linear-gradient(180deg, var(--app-accent) 0%, var(--app-accent-strong) 100%);
     color: white;
-    transition: border-color 180ms ease, color 180ms ease, transform 180ms ease;
+    transition: border-color 180ms ease, color 180ms ease, background-color 180ms ease;
   }
 
   .btn-accent:hover {
@@ -261,15 +276,12 @@
     border-color: color-mix(in srgb, var(--app-accent) 45%, var(--app-border));
   }
 
-  .btn-accent:active {
-    transform: translateY(1px);
-  }
 
   .btn-danger {
     border: 1px solid color-mix(in srgb, var(--app-danger) 28%, var(--app-border));
     background: color-mix(in srgb, var(--app-danger) 10%, transparent);
     color: var(--app-danger);
-    transition: background-color 180ms ease, color 180ms ease, border-color 180ms ease, transform 180ms ease;
+    transition: background-color 180ms ease, color 180ms ease, border-color 180ms ease;
   }
 
   .btn-danger:hover {
@@ -278,22 +290,16 @@
     border-color: color-mix(in srgb, var(--app-danger) 56%, var(--app-border));
   }
 
-  .btn-danger:active {
-    transform: translateY(1px) scale(0.98);
-  }
 
   .btn-ghost {
     color: var(--app-text-muted);
-    transition: color 180ms ease, opacity 180ms ease, transform 180ms ease;
+    transition: color 180ms ease, opacity 180ms ease;
   }
 
   .btn-ghost:hover {
     color: var(--app-text);
   }
 
-  .btn-ghost:active {
-    transform: translateY(1px);
-  }
 
 
   .dialog-btn-muted {
@@ -301,7 +307,7 @@
     border: 1px solid var(--app-border);
     background: color-mix(in srgb, var(--app-text) 4%, transparent);
     color: var(--app-text-soft);
-    transition: background-color 180ms ease, color 180ms ease, border-color 180ms ease, transform 180ms ease, box-shadow 180ms ease;
+    transition: background-color 180ms ease, color 180ms ease, border-color 180ms ease;
   }
 
   .dialog-btn-muted:hover {
@@ -310,15 +316,12 @@
     border-color: var(--app-border-strong);
   }
 
-  .dialog-btn-muted:active {
-    transform: translateY(1px) scale(0.98);
-  }
 
   .dialog-btn-accent {
     @apply rounded-2xl px-4 py-2 text-sm font-semibold text-white;
     border: 1px solid transparent;
     background: linear-gradient(180deg, var(--app-accent) 0%, var(--app-accent-strong) 100%);
-    transition: border-color 180ms ease, color 180ms ease, transform 180ms ease;
+    transition: border-color 180ms ease, color 180ms ease, background-color 180ms ease;
   }
 
   .dialog-btn-accent:hover {
@@ -327,15 +330,12 @@
     border-color: color-mix(in srgb, var(--app-accent) 45%, var(--app-border));
   }
 
-  .dialog-btn-accent:active {
-    transform: translateY(1px) scale(0.98);
-  }
 
   .dialog-btn-danger {
     @apply rounded-2xl px-4 py-2 text-sm font-semibold text-white;
     border: 1px solid color-mix(in srgb, var(--app-danger) 28%, var(--app-border));
     background: linear-gradient(180deg, color-mix(in srgb, var(--app-danger) 92%, white) 0%, var(--app-danger) 100%);
-    transition: background-color 180ms ease, border-color 180ms ease, transform 180ms ease, box-shadow 180ms ease;
+    transition: background-color 180ms ease, border-color 180ms ease;
   }
 
   .dialog-btn-danger:hover {
@@ -344,9 +344,6 @@
     border-color: color-mix(in srgb, var(--app-danger) 62%, var(--app-border));
   }
 
-  .dialog-btn-danger:active {
-    transform: translateY(1px) scale(0.98);
-  }
 
 
   .dialog-panel {
@@ -417,6 +414,59 @@
   }
 
 
+  .thinking-text {
+    color: var(--app-text-muted);
+  }
+
+  .thinking-wave {
+    background: linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--app-text-muted) 72%, transparent) 0%,
+      color-mix(in srgb, var(--app-text) 96%, transparent) 45%,
+      color-mix(in srgb, var(--app-text-muted) 72%, transparent) 100%
+    );
+    background-size: 220% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: thinking-wave 1.6s linear infinite;
+  }
+
+  .loading-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--app-text) 46%, transparent);
+    animation: pulse-dot 1.1s ease-in-out infinite;
+  }
+
+  .animation-delay-150 {
+    animation-delay: 0.15s;
+  }
+
+  .animation-delay-300 {
+    animation-delay: 0.3s;
+  }
+
+
+
+  .message-copy-row {
+    @apply mt-2 flex h-7 items-center;
+  }
+
+  .message-copy-btn {
+    @apply flex h-7 w-7 items-center justify-center rounded-full transition;
+  }
+
+
+  .selectable-text,
+  .selectable-text * {
+    user-select: text;
+    -webkit-user-select: text;
+    cursor: text;
+  }
+
+
   .text-app {
     color: var(--app-text);
   }
@@ -451,8 +501,40 @@
   }
 
   .session-card-active {
-    border: 1px solid color-mix(in srgb, var(--app-accent) 28%, var(--app-border));
-    background: color-mix(in srgb, var(--app-accent) 10%, transparent);
-    box-shadow: inset 0 1px 0 color-mix(in srgb, white 6%, transparent);
+    border: 1px solid color-mix(in srgb, var(--app-accent) 42%, var(--app-border));
+    background: var(--app-accent-surface-strong);
+    box-shadow: inset 0 1px 0 color-mix(in srgb, white 10%, transparent);
   }
 }
+
+@keyframes pulse-dot {
+  0%, 80%, 100% { opacity: 0.35; transform: scale(0.9); }
+  40% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes thinking-wave {
+  0% { background-position: 200% 0; }
+  100% { background-position: -20% 0; }
+}
+
+
+  .toast-card {
+    box-shadow: var(--app-shadow);
+  }
+
+  .toast-stack-move,
+  .toast-stack-enter-active,
+  .toast-stack-leave-active {
+    transition: opacity 220ms ease, transform 220ms ease;
+  }
+
+  .toast-stack-enter-from,
+  .toast-stack-leave-to {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.98);
+  }
+
+  .toast-stack-leave-active {
+    position: absolute;
+    width: calc(100% - 2rem);
+  }

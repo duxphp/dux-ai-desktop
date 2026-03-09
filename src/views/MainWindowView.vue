@@ -1,11 +1,13 @@
 <script setup lang="ts">
-import { IconEdit, IconInfoCircle, IconTrash, IconSettings } from '@tabler/icons-vue'
+import { IconInfoCircle, IconSettings } from '@tabler/icons-vue'
 import { computed, onMounted, ref } from 'vue'
 import ChatPanel from '../components/ChatPanel.vue'
 import DesktopWindowControls from '../components/DesktopWindowControls.vue'
 import WindowSidebar from '../components/WindowSidebar.vue'
 import { openChildWindow } from '../lib/app-windows'
-import { isMacLike, startWindowDragging } from '../lib/window'
+import { isEditableContextTarget, showEditableContextMenu } from '../lib/native-menu'
+import { isMacLike } from '../lib/window'
+import { pushToast } from '../lib/toast'
 import { useChatStore } from '../stores/chat'
 import { useSettingsStore } from '../stores/settings'
 
@@ -25,6 +27,7 @@ const renameOpen = ref(false)
 const deleteOpen = ref(false)
 const renameValue = ref('')
 const actionBusy = ref(false)
+const refreshBusy = ref(false)
 
 async function bootstrap(force = false) {
   if (!settings.configured) {
@@ -42,18 +45,30 @@ async function openAboutWindow() {
   await openChildWindow('about')
 }
 
-function handleHeaderMouseDown(event: MouseEvent) {
-  if (event.button !== 0) {
+async function refreshCurrentConversation() {
+  if (refreshBusy.value || chat.sending) {
     return
   }
-  const target = event.target as HTMLElement | null
-  if (target?.closest('.no-drag')) {
-    return
+  refreshBusy.value = true
+  try {
+    await chat.refreshCurrentSession()
+    await new Promise(resolve => setTimeout(resolve, 320))
+    pushToast('已刷新最新消息', 'success')
   }
-  void startWindowDragging()
+  finally {
+    refreshBusy.value = false
+  }
 }
 
-function openRenameDialog() {
+async function ensureSessionFocused(sessionId?: number | null) {
+  if (!sessionId || sessionId === activeSession.value?.id) {
+    return
+  }
+  await chat.selectSession(sessionId)
+}
+
+async function openRenameDialog(sessionId?: number | null) {
+  await ensureSessionFocused(sessionId)
   if (!activeSession.value) {
     return
   }
@@ -61,7 +76,8 @@ function openRenameDialog() {
   renameOpen.value = true
 }
 
-function openDeleteDialog() {
+async function openDeleteDialog(sessionId?: number | null) {
+  await ensureSessionFocused(sessionId)
   if (!activeSession.value) {
     return
   }
@@ -97,6 +113,21 @@ async function confirmDelete() {
   }
 }
 
+function handleRootContextMenu(event: MouseEvent) {
+  const target = event.target as HTMLElement | null
+  if (!target) {
+    return
+  }
+  if (isEditableContextTarget(target)) {
+    void showEditableContextMenu(event)
+    return
+  }
+  if (target.closest('[data-context-menu-controlled="true"]')) {
+    return
+  }
+  event.preventDefault()
+}
+
 onMounted(async () => {
   await settings.init()
   await bootstrap()
@@ -104,7 +135,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="relative h-full w-full overflow-hidden bg-transparent text-app-text" :class="rootClass">
+  <div class="relative h-full w-full overflow-hidden bg-transparent text-app-text" :class="rootClass" @contextmenu="handleRootContextMenu">
     <div
       v-if="!isMacLike"
       class="pointer-events-none absolute inset-0"
@@ -118,7 +149,6 @@ onMounted(async () => {
         v-if="isMacLike"
         class="relative h-[40px] shrink-0"
         data-tauri-drag-region
-        @mousedown="handleHeaderMouseDown"
       >
         <div class="no-drag absolute right-3 top-3 z-20 flex items-center gap-2">
           <button class="btn-ghost" aria-label="打开关于" @click="openAboutWindow">
@@ -134,7 +164,6 @@ onMounted(async () => {
         v-else
         class="relative flex h-[38px] shrink-0 items-center justify-between px-3"
         data-tauri-drag-region
-        @mousedown="handleHeaderMouseDown"
       >
         <div class="min-w-0" data-tauri-drag-region>
           <div class="truncate text-sm font-semibold text-[color:var(--app-text)]">Dux AI</div>
@@ -150,8 +179,8 @@ onMounted(async () => {
         </div>
       </header>
 
-      <div class="grid min-h-0 flex-1 grid-cols-[290px_minmax(0,1fr)] overflow-hidden">
-        <div class="flex min-h-0 min-w-0 flex-col overflow-hidden">
+      <div class="no-drag grid min-h-0 flex-1 grid-cols-[290px_minmax(0,1fr)] overflow-hidden">
+        <div class="no-drag flex min-h-0 min-w-0 flex-col overflow-hidden">
           <WindowSidebar
             :sessions="chat.sessions"
             :agents="chat.agents"
@@ -162,7 +191,8 @@ onMounted(async () => {
             @create-session="chat.createSession"
             @select-session="chat.selectSession"
             @select-agent="chat.selectAgent"
-            @open-settings="openSettingsWindow"
+            @request-rename-session="openRenameDialog"
+            @request-delete-session="openDeleteDialog"
           />
         </div>
 
@@ -179,12 +209,16 @@ onMounted(async () => {
               :sending="chat.sending"
               :uploading="chat.uploading"
               :error="chat.error"
+              :refreshing="refreshBusy"
               @send="chat.sendMessage"
               @cancel="chat.cancelCurrentStream"
               @attach="chat.pickAndUploadFile"
+              @remove-attachment="chat.removePendingAttachment"
               @retry-bootstrap="bootstrap(true)"
-              @request-rename="openRenameDialog"
-              @request-delete="openDeleteDialog"
+              @request-rename="openRenameDialog()"
+              @request-delete="openDeleteDialog()"
+              @request-retry="chat.retryLastMessage"
+              @request-refresh="refreshCurrentConversation"
             />
           </div>
         </div>
@@ -198,6 +232,7 @@ onMounted(async () => {
         <input
           v-model="renameValue"
           class="field-base mt-4 w-full rounded-2xl px-4 py-3 text-sm"
+          @contextmenu="showEditableContextMenu($event)"
           placeholder="例如：需求讨论"
           @keydown.enter.prevent="confirmRename"
         >

@@ -1,1 +1,1 @@
-{"default":{"identifier":"default","description":"Default capability for the Dux AI desktop chat window.","local":true,"windows":["main"],"permissions":["core:default","dialog:default","store:default"]}}
+{"default":{"identifier":"default","description":"Default capability for the Dux AI desktop chat window.","local":true,"windows":["main","settings","about"],"permissions":["core:default","dialog:default","store:default","core:window:allow-start-dragging"]}}

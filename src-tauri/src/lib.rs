@@ -5,6 +5,7 @@ use serde_json::{json, Value};
 use std::collections::HashMap;
 use std::sync::OnceLock;
 use std::path::Path;
+use std::process::Command;
 use std::sync::{Arc, Mutex};
 use tauri::{
     AppHandle, Emitter, Manager, State, WebviewUrl, WebviewWindow, WebviewWindowBuilder,
@@ -60,6 +61,20 @@ struct CancelStreamRequest {
 #[serde(rename_all = "camelCase")]
 struct OpenAppWindowRequest {
     kind: String,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct OpenExternalRequest {
+    url: String,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct DownloadRemoteAssetRequest {
+    url: String,
+    save_path: String,
+    token: Option<String>,
 }
 
 #[derive(Debug, Serialize, Clone)]
@@ -184,7 +199,7 @@ fn emit_stream_end(app: &AppHandle, window_label: &str, stream_id: &str) {
     }
 }
 
-fn configure_macos_window(window: &WebviewWindow, clear_title: bool) -> tauri::Result<()> {
+fn configure_macos_window(window: &WebviewWindow, clear_title: bool, movable_by_background: bool) -> tauri::Result<()> {
     window.set_decorations(true)?;
     if clear_title {
         window.set_title("")?;
@@ -197,14 +212,14 @@ fn configure_macos_window(window: &WebviewWindow, clear_title: bool) -> tauri::R
     )?;
 
     #[cfg(target_os = "macos")]
-    window.with_webview(|webview| unsafe {
+    window.with_webview(move |webview| unsafe {
         let ns_window: &NSWindow = &*webview.ns_window().cast();
 
         ns_window.setOpaque(false);
         let clear = NSColor::clearColor();
         ns_window.setBackgroundColor(Some(&clear));
         ns_window.setHasShadow(true);
-        ns_window.setMovableByWindowBackground(true);
+        ns_window.setMovableByWindowBackground(movable_by_background);
     })?;
 
     Ok(())
@@ -213,7 +228,7 @@ fn configure_macos_window(window: &WebviewWindow, clear_title: bool) -> tauri::R
 fn configure_child_window(window: &WebviewWindow) -> tauri::Result<()> {
     #[cfg(target_os = "macos")]
     {
-        configure_macos_window(window, false)?;
+        configure_macos_window(window, false, false)?;
     }
     #[cfg(not(target_os = "macos"))]
     {
@@ -265,6 +280,76 @@ async fn open_app_window(app: AppHandle, request: OpenAppWindowRequest) -> Resul
 
     let window = builder.build().map_err(|error| error.to_string())?;
     configure_child_window(&window).map_err(|error| error.to_string())?;
+    Ok(())
+}
+
+#[tauri::command]
+async fn open_external(request: OpenExternalRequest) -> Result<(), String> {
+    let url = request.url.trim();
+    if url.is_empty() {
+        return Err("链接不能为空".to_string());
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        Command::new("open")
+            .arg(url)
+            .spawn()
+            .map_err(|error| error.to_string())?;
+        return Ok(());
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        Command::new("cmd")
+            .args(["/C", "start", "", url])
+            .spawn()
+            .map_err(|error| error.to_string())?;
+        return Ok(());
+    }
+
+    #[cfg(all(unix, not(target_os = "macos")))]
+    {
+        Command::new("xdg-open")
+            .arg(url)
+            .spawn()
+            .map_err(|error| error.to_string())?;
+        return Ok(());
+    }
+}
+
+#[tauri::command]
+async fn download_remote_asset(request: DownloadRemoteAssetRequest) -> Result<(), String> {
+    let url = request.url.trim();
+    if url.is_empty() {
+        return Err("下载链接不能为空".to_string());
+    }
+
+    let save_path = Path::new(&request.save_path);
+    if let Some(parent) = save_path.parent() {
+        std::fs::create_dir_all(parent).map_err(|error| error.to_string())?;
+    }
+
+    let client = reqwest::Client::new();
+    let mut builder = client.get(url);
+
+    if let Some(token) = request.token.as_deref() {
+        let token = token.trim();
+        if !token.is_empty() {
+            builder = builder.bearer_auth(token);
+        }
+    }
+
+    let response = builder.send().await.map_err(|error| error.to_string())?;
+    let status = response.status();
+
+    if !status.is_success() {
+        let text = response.text().await.unwrap_or_default();
+        return Err(extract_error_message(status.as_u16(), &text));
+    }
+
+    let bytes = response.bytes().await.map_err(|error| error.to_string())?;
+    std::fs::write(save_path, &bytes).map_err(|error| error.to_string())?;
     Ok(())
 }
 
@@ -442,12 +527,14 @@ pub fn run() {
         .setup(|app| {
             #[cfg(target_os = "macos")]
             if let Some(window) = app.get_webview_window("main") {
-                configure_macos_window(&window, true)?;
+                configure_macos_window(&window, true, false)?;
             }
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
             open_app_window,
+            open_external,
+            download_remote_asset,
             api_request,
             upload_file,
             start_chat_stream,

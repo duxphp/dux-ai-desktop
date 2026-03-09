@@ -7,6 +7,10 @@ export interface PickedLocalFile {
   size: number
 }
 
+export type AttachmentPickKind = 'image' | 'document' | 'video'
+
+const DOCUMENT_EXTENSIONS = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'csv', 'ppt', 'pptx', 'txt', 'md', 'rtf', 'json', 'xml', 'html', 'htm']
+
 export function isTauriRuntime(): boolean {
   if (typeof window === 'undefined') {
     return false
@@ -38,13 +42,61 @@ export function basename(path: string): string {
   return String(path || '').split(/[/\\]/).filter(Boolean).pop() || 'file'
 }
 
-export async function pickLocalFiles(): Promise<PickedLocalFile[]> {
+export function extensionFromName(name: string) {
+  const value = String(name || '').trim().toLowerCase()
+  const index = value.lastIndexOf('.')
+  return index >= 0 ? value.slice(index + 1) : ''
+}
+
+export function detectAttachmentKind(name: string, mimeType = ''): AttachmentPickKind {
+  const mime = String(mimeType || '').toLowerCase()
+  const ext = extensionFromName(name)
+
+  if (mime.startsWith('image/') || ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'bmp', 'heic'].includes(ext)) {
+    return 'image'
+  }
+
+  if (mime.startsWith('video/') || ['mp4', 'mov', 'm4v', 'webm', 'avi', 'mkv'].includes(ext)) {
+    return 'video'
+  }
+
+  return 'document'
+}
+
+function pickDialogConfig(kind: AttachmentPickKind) {
+  if (kind === 'image') {
+    return {
+      title: '选择图片',
+      filters: [{ name: '图片', extensions: ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'bmp', 'heic'] }],
+      accept: 'image/*',
+    }
+  }
+
+  if (kind === 'video') {
+    return {
+      title: '选择视频',
+      filters: [{ name: '视频', extensions: ['mp4', 'mov', 'm4v', 'webm', 'avi', 'mkv'] }],
+      accept: 'video/*,.mp4,.mov,.m4v,.webm,.avi,.mkv',
+    }
+  }
+
+  return {
+    title: '选择文档',
+    filters: [{ name: '文档', extensions: DOCUMENT_EXTENSIONS }],
+    accept: DOCUMENT_EXTENSIONS.map(ext => `.${ext}`).join(','),
+  }
+}
+
+export async function pickLocalFiles(kind: AttachmentPickKind = 'document'): Promise<PickedLocalFile[]> {
+  const config = pickDialogConfig(kind)
+
   if (isTauriRuntime()) {
     const { open } = await import('@tauri-apps/plugin-dialog')
     const selected = await open({
       multiple: true,
       directory: false,
-      title: '选择要发送的附件',
+      title: config.title,
+      filters: config.filters,
     })
 
     if (!selected) {
@@ -65,6 +117,7 @@ export async function pickLocalFiles(): Promise<PickedLocalFile[]> {
     const input = document.createElement('input')
     input.type = 'file'
     input.multiple = true
+    input.accept = config.accept
     input.onchange = () => {
       const files = Array.from(input.files || [])
       resolve(files.map(file => ({

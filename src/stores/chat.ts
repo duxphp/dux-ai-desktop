@@ -11,7 +11,7 @@ import type {
 } from '../types/chat'
 import { buildUserMessage, decomposeContent, DuxAiClient, titleFromInput } from '../lib/dux-ai'
 import { emptySettings } from '../lib/settings-repository'
-import { basename, pickLocalFiles, safeErrorMessage } from '../lib/runtime'
+import { basename, detectAttachmentKind, pickLocalFiles, safeErrorMessage } from '../lib/runtime'
 import { useSettingsStore } from './settings'
 
 function sortSessions(items: SessionItem[]): SessionItem[] {
@@ -22,12 +22,13 @@ function sortSessions(items: SessionItem[]): SessionItem[] {
   })
 }
 
-function makeDraftMessage(role: 'user' | 'assistant', content: ChatMessage['content']): ChatMessage {
+function makeDraftMessage(role: 'user' | 'assistant', content: ChatMessage['content'], meta?: ChatMessage['meta']): ChatMessage {
   return {
     id: `draft-${role}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     role,
     content,
     created_at: new Date().toISOString(),
+    meta,
   }
 }
 
@@ -78,6 +79,17 @@ export const useChatStore = defineStore('chat', () => {
   const activeAgentCode = computed(() => currentAgentId.value)
   const activeSessionId = computed(() => currentSessionId.value)
 
+  function revokeAttachmentPreview(item: DraftAttachment) {
+    if (item.previewUrl?.startsWith('blob:')) {
+      URL.revokeObjectURL(item.previewUrl)
+    }
+  }
+
+  function clearPendingAttachments() {
+    pendingAttachments.value.forEach(revokeAttachmentPreview)
+    pendingAttachments.value = []
+  }
+
   function resetState() {
     cancelCurrentStream()
     agents.value = []
@@ -85,7 +97,7 @@ export const useChatStore = defineStore('chat', () => {
     messagesBySession.value = {}
     currentAgentId.value = ''
     currentSessionId.value = null
-    pendingAttachments.value = []
+    clearPendingAttachments()
     loadingAgents.value = false
     loadingSessions.value = false
     loadingMessages.value = false
@@ -202,7 +214,7 @@ export const useChatStore = defineStore('chat', () => {
     cancelCurrentStream()
     currentAgentId.value = agentId
     currentSessionId.value = null
-    pendingAttachments.value = []
+    clearPendingAttachments()
     await refreshSessions()
     if (currentSessionId.value) {
       await refreshMessages(currentSessionId.value)
@@ -256,12 +268,20 @@ export const useChatStore = defineStore('chat', () => {
     }
   }
 
-  async function pickAndUploadFile() {
+  function removePendingAttachment(id: string) {
+    const current = pendingAttachments.value.find(item => item.id === id)
+    if (current) {
+      revokeAttachmentPreview(current)
+    }
+    pendingAttachments.value = pendingAttachments.value.filter(item => item.id !== id)
+  }
+
+  async function pickAndUploadFile(kind: 'image' | 'document' | 'video' = 'document') {
     if (!currentAgentId.value) {
       throw new Error('请先选择智能体')
     }
 
-    const picked = await pickLocalFiles()
+    const picked = await pickLocalFiles(kind)
     if (!picked.length) {
       return
     }
@@ -272,6 +292,8 @@ export const useChatStore = defineStore('chat', () => {
         name: item.name,
         mimeType: item.mimeType,
         size: item.size,
+        kind: detectAttachmentKind(item.name, item.mimeType || ''),
+        previewUrl: item.file && detectAttachmentKind(item.name, item.mimeType || '') === 'image' ? URL.createObjectURL(item.file) : '',
         path: item.path,
         file: item.file,
         status: 'uploading',
@@ -284,6 +306,10 @@ export const useChatStore = defineStore('chat', () => {
         draft.status = 'uploaded'
         draft.mimeType = draft.mimeType || remote.mime_type || ''
         draft.size = draft.size || remote.bytes || 0
+        draft.kind = detectAttachmentKind(draft.name, draft.mimeType || remote.mime_type || '')
+        if (!draft.previewUrl && draft.kind === 'image' && remote.url) {
+          draft.previewUrl = remote.url
+        }
       }
       catch (error) {
         draft.status = 'error'
@@ -328,7 +354,7 @@ export const useChatStore = defineStore('chat', () => {
     const sessionId = await ensureSessionForSend()
     const userMessage = buildUserMessage(trimmed, uploaded)
     const optimisticUser = makeDraftMessage('user', userMessage.content)
-    const optimisticAssistant = makeDraftMessage('assistant', '')
+    const optimisticAssistant = makeDraftMessage('assistant', '', { status: 'loading' })
     const history = messagesBySession.value[sessionId] || []
 
     messagesBySession.value = {
@@ -387,18 +413,72 @@ export const useChatStore = defineStore('chat', () => {
         }
       }
 
-      pendingAttachments.value = []
+      clearPendingAttachments()
       await refreshSessions()
       await refreshMessages(sessionId)
     }
     catch (error) {
-      lastError.value = safeErrorMessage(error, '发送消息失败')
+      const errorMessage = safeErrorMessage(error, '发送消息失败')
+      const current = messagesBySession.value[sessionId] || []
+      const last = current[current.length - 1]
+
+      if (last?.role === 'assistant') {
+        messagesBySession.value = {
+          ...messagesBySession.value,
+          [sessionId]: [
+            ...current.slice(0, -1),
+            {
+              ...last,
+              content: errorMessage,
+              meta: {
+                ...(last.meta || {}),
+                status: 'error',
+              },
+            },
+          ],
+        }
+      }
+      else {
+        messagesBySession.value = {
+          ...messagesBySession.value,
+          [sessionId]: [
+            ...current,
+            makeDraftMessage('assistant', errorMessage, { status: 'error' }),
+          ],
+        }
+      }
       throw error
     }
     finally {
       sending.value = false
       streamAbortController = null
     }
+  }
+
+
+  async function retryLastMessage() {
+    const sessionId = currentSessionId.value
+    if (!sessionId || sending.value) {
+      return
+    }
+    const current = messagesBySession.value[sessionId] || []
+    const lastUser = [...current].reverse().find(item => item.role === 'user')
+    if (!lastUser) {
+      return
+    }
+    const { text } = decomposeContent(lastUser.content)
+    if (!text.trim()) {
+      return
+    }
+    await sendMessage(text)
+  }
+
+  async function refreshCurrentSession() {
+    if (!currentSessionId.value) {
+      return []
+    }
+    await refreshSessions()
+    return await refreshMessages(currentSessionId.value)
   }
 
   function cancelCurrentStream() {
@@ -413,6 +493,7 @@ export const useChatStore = defineStore('chat', () => {
     sessions,
     messages,
     pendingAttachments,
+    removePendingAttachment,
     sending,
     uploading,
     booting,
@@ -428,6 +509,8 @@ export const useChatStore = defineStore('chat', () => {
     renameSession,
     deleteSession,
     sendMessage,
+    retryLastMessage,
+    refreshCurrentSession,
     cancelCurrentStream,
     pickAndUploadFile,
   }

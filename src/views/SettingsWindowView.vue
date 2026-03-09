@@ -1,16 +1,39 @@
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { onBeforeUnmount, onMounted } from 'vue'
 import ChildWindowShell from '../components/ChildWindowShell.vue'
+import { isTauriRuntime } from '../lib/runtime'
+import { showEditableContextMenu } from '../lib/native-menu'
 import { useSettingsStore } from '../stores/settings'
 
 const settings = useSettingsStore()
+let unlistenFocus: null | (() => void) = null
+
+async function hydrateSettings() {
+  await settings.init()
+}
 
 async function saveSettings() {
   await settings.saveForm()
 }
 
 onMounted(async () => {
-  await settings.init()
+  await hydrateSettings()
+
+  if (!isTauriRuntime()) {
+    return
+  }
+
+  const { getCurrentWindow } = await import('@tauri-apps/api/window')
+  unlistenFocus = await getCurrentWindow().onFocusChanged(async ({ payload: focused }) => {
+    if (focused) {
+      await hydrateSettings()
+    }
+  })
+})
+
+onBeforeUnmount(() => {
+  unlistenFocus?.()
+  unlistenFocus = null
 })
 </script>
 
@@ -24,6 +47,7 @@ onMounted(async () => {
           class="field-base rounded-2xl px-4 py-3 text-sm"
           placeholder="例如 http://127.0.0.1:8000"
           @input="settings.updateForm({ ...settings.form, serverUrl: ($event.target as HTMLInputElement).value })"
+          @contextmenu="showEditableContextMenu($event)"
         >
 
         <label class="text-xs font-medium text-[color:var(--app-text-muted)]">Token</label>
@@ -33,6 +57,7 @@ onMounted(async () => {
           class="field-base rounded-2xl px-4 py-3 text-sm"
           placeholder="sk-..."
           @input="settings.updateForm({ ...settings.form, token: ($event.target as HTMLInputElement).value })"
+          @contextmenu="showEditableContextMenu($event)"
         >
 
         <div

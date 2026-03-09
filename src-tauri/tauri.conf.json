@@ -27,7 +27,8 @@
         "transparent": true,
         "shadow": true,
         "hiddenTitle": true,
-        "titleBarStyle": "Overlay"
+        "titleBarStyle": "Overlay",
+        "acceptFirstMouse": true
       }
     ],
     "security": {
@@ -40,6 +41,10 @@
     "targets": [
       "app"
     ],
-    "category": "Productivity"
+    "category": "Productivity",
+    "resources": {
+      "infoplist/zh-Hans.lproj/InfoPlist.strings": "zh-Hans.lproj/InfoPlist.strings",
+      "infoplist/en.lproj/InfoPlist.strings": "en.lproj/InfoPlist.strings"
+    }
   }
 }

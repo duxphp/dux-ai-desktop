@@ -116,6 +116,7 @@ export interface ChatMessage {
   tool_calls?: Array<Record<string, unknown>>
   meta?: {
     card?: Record<string, unknown> | Record<string, unknown>[]
+    status?: 'loading' | 'done' | 'error'
   }
 }
 
@@ -124,6 +125,8 @@ export interface DraftAttachment {
   name: string
   mimeType: string
   size: number
+  kind?: 'image' | 'document' | 'video'
+  previewUrl?: string
   status: 'queued' | 'uploading' | 'uploaded' | 'error'
   file?: File
   path?: string

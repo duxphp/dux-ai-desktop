@@ -1,0 +1,6 @@
+/* Dux AI macOS bundle localization */
+CFBundleDisplayName = "Dux AI";
+CFBundleName = "Dux AI";
+CFBundleShortName = "Dux AI";
+NSCameraUsageDescription = "Dux AI 需要使用摄像头。";
+NSMicrophoneUsageDescription = "Dux AI 需要使用麦克风。";

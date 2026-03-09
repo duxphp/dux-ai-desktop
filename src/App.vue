@@ -4,6 +4,7 @@ import { resolveWindowKind } from './lib/app-windows'
 import AboutWindowView from './views/AboutWindowView.vue'
 import MainWindowView from './views/MainWindowView.vue'
 import SettingsWindowView from './views/SettingsWindowView.vue'
+import ToastViewport from './components/ToastViewport.vue'
 
 const windowKind = resolveWindowKind()
 
@@ -20,4 +21,5 @@ const activeView = computed(() => {
 
 <template>
   <component :is="activeView" />
+  <ToastViewport />
 </template>

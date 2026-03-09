@@ -30,11 +30,6 @@ export async function closeWindow() {
   await window?.close()
 }
 
-export async function startWindowDragging() {
-  const window = await currentWindow()
-  await window?.startDragging()
-}
-
 export async function isWindowMaximized() {
   const window = await currentWindow()
   return window ? window.isMaximized() : false
