@@ -16,6 +16,7 @@ const props = defineProps<{
   uploading: boolean
   refreshing: boolean
   error: string
+  approvalSubmittingKey?: string
 }>()
 
 const emit = defineEmits<{
@@ -28,6 +29,7 @@ const emit = defineEmits<{
   requestDelete: []
   requestRetry: []
   requestRefresh: []
+  requestCardAction: [button: any]
 }>()
 
 const draft = ref('')
@@ -200,7 +202,14 @@ watch(() => props.activeSession?.id, () => {
           </div>
 
           <div class="space-y-4 pb-2">
-            <MessageBubble v-for="message in messages" :key="message.localId || message.id" :message="message" @retry="emit('requestRetry')" />
+            <MessageBubble
+              v-for="message in messages"
+              :key="message.localId || message.id"
+              :message="message"
+              :approval-submitting-key="approvalSubmittingKey"
+              @retry="emit('requestRetry')"
+              @card-action="emit('requestCardAction', $event)"
+            />
           </div>
         </div>
 
@@ -258,7 +267,6 @@ watch(() => props.activeSession?.id, () => {
           </div>
           <div class="text-app-muted text-xs">
             <span v-if="activeAgent">{{ activeAgent.name }}</span>
-            <span v-if="sending"> · 正在生成…</span>
           </div>
         </div>
 
@@ -273,7 +281,7 @@ watch(() => props.activeSession?.id, () => {
             @contextmenu="showEditableContextMenu($event)"
           />
           <div class="flex items-center gap-2">
-            <button v-if="sending" class="btn-muted rounded-2xl px-4 py-3 text-sm" @click="emit('cancel')">停止</button>
+            <button v-if="sending" class="btn-danger rounded-2xl px-4 py-3 text-sm font-semibold" @click="emit('cancel')">停止生成</button>
             <button v-else class="btn-accent rounded-2xl px-5 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-55" :disabled="!canSend" @click="submit">发送</button>
           </div>
         </div>

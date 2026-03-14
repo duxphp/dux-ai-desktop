@@ -116,6 +116,7 @@ export interface ChatMessage {
   tool_calls?: Array<Record<string, unknown>>
   meta?: {
     card?: Record<string, unknown> | Record<string, unknown>[]
+    approval?: Record<string, unknown>
     status?: 'loading' | 'done' | 'error'
   }
 }

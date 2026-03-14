@@ -10,6 +10,7 @@ import { isMacLike } from '../lib/window'
 import { pushToast } from '../lib/toast'
 import { useChatStore } from '../stores/chat'
 import { useSettingsStore } from '../stores/settings'
+import { openExternalUrl } from '../lib/external'
 
 const settings = useSettingsStore()
 const chat = useChatStore()
@@ -30,6 +31,7 @@ const renameValue = ref('')
 const renameTargetId = ref<number | null>(null)
 const deleteTargetId = ref<number | null>(null)
 const refreshBusy = ref(false)
+const cardActionSubmitting = ref<string>('')
 let refreshTimer: number | null = null
 
 function selectedSession(sessionId?: number | null) {
@@ -127,6 +129,48 @@ async function handleCreateSession() {
   }
   catch {
     pushToast(chat.error || '创建会话失败', 'error')
+  }
+}
+
+async function handleCardAction(button: any) {
+  const type = String(button?.type || '').toLowerCase()
+  if (type === 'approval-reply') {
+    const text = String(button?.text || '').trim()
+    if (!text) {
+      pushToast('审批消息内容为空', 'error')
+      return
+    }
+    const approvalId = Number(button?.approval_id || 0)
+    if (!approvalId) {
+      pushToast('审批参数不完整', 'error')
+      return
+    }
+    const actionKey = `${approvalId}:${text}`
+    if (cardActionSubmitting.value === actionKey) {
+      return
+    }
+    cardActionSubmitting.value = actionKey
+    try {
+      await chat.sendMessage(text)
+      chat.applyApprovalDecisionLocal(approvalId, text === '同意' ? 'approve' : 'reject')
+      await chat.refreshCurrentSession({ silent: true, forceFull: true })
+    }
+    catch (error: any) {
+      console.error('approval action failed', error)
+      pushToast(error?.message || chat.error || '审批操作失败', 'error')
+    }
+    finally {
+      cardActionSubmitting.value = ''
+    }
+    return
+  }
+
+  if (type === 'url') {
+    const url = String(button?.url || '')
+    if (url) {
+      await openExternalUrl(url)
+    }
+    return
   }
 }
 
@@ -249,6 +293,7 @@ onBeforeUnmount(() => {
               :uploading="chat.uploading"
               :error="chat.error"
               :refreshing="refreshBusy"
+              :approval-submitting-key="cardActionSubmitting"
               @send="chat.sendMessage"
               @cancel="chat.cancelCurrentStream"
               @attach="chat.pickAndUploadFile"
@@ -258,6 +303,7 @@ onBeforeUnmount(() => {
               @request-delete="openDeleteDialog(chat.activeSessionId)"
               @request-retry="chat.retryLastMessage"
               @request-refresh="refreshCurrentConversation(false)"
+              @request-card-action="handleCardAction"
             />
           </div>
         </div>

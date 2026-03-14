@@ -54,6 +54,15 @@ function messageNumericId(message: ChatMessage | undefined): number {
   return Number.isFinite(value) ? value : 0
 }
 
+function isAbortLikeError(error: unknown): boolean {
+  if (!error) {
+    return false
+  }
+  const name = typeof error === 'object' && error && 'name' in error ? String((error as any).name || '') : ''
+  const message = typeof error === 'object' && error && 'message' in error ? String((error as any).message || '') : String(error || '')
+  return name === 'AbortError' || /abort|aborted|cancelled|canceled/i.test(message)
+}
+
 function contentSignature(content: ChatMessage['content']): string {
   if (typeof content === 'string') {
     return content.trim()
@@ -630,6 +639,22 @@ export const useChatStore = defineStore('chat', () => {
       await refreshMessages(sessionId, { forceFull: false, silent: true })
     }
     catch (error) {
+      if (isAbortLikeError(error)) {
+        const current = messagesBySession.value[sessionId] || []
+        const draftId = ensureSessionRuntime(sessionId).pendingAssistantDraftId
+        const filtered = current.filter(message => String(message.id) !== String(draftId))
+        messagesBySession.value = {
+          ...messagesBySession.value,
+          [sessionId]: filtered,
+        }
+        updateSessionRuntime(sessionId, current => ({
+          ...current,
+          pendingAssistantDraftId: null,
+          error: '',
+        }))
+        return
+      }
+
       const errorMessage = safeErrorMessage(error, '发送消息失败')
       const current = messagesBySession.value[sessionId] || []
       const draftId = ensureSessionRuntime(sessionId).pendingAssistantDraftId
@@ -728,12 +753,41 @@ export const useChatStore = defineStore('chat', () => {
     await startStreamForSession(sessionId, lastUser.content)
   }
 
-  async function refreshCurrentSession(options: { silent?: boolean } = {}) {
+  async function refreshCurrentSession(options: { silent?: boolean, forceFull?: boolean } = {}) {
     if (!currentSessionId.value || creatingSession.value) {
       return []
     }
     await refreshSessions({ preserveCurrent: true })
-    return await refreshMessages(currentSessionId.value, { forceFull: false, silent: options.silent })
+    return await refreshMessages(currentSessionId.value, { forceFull: options.forceFull, silent: options.silent })
+  }
+
+  function applyApprovalDecisionLocal(approvalId: number, decision: 'approve' | 'reject' | 'expired') {
+    const sessionId = currentSessionId.value
+    if (!sessionId || !approvalId) {
+      return
+    }
+    const current = messagesBySession.value[sessionId] || []
+    const next = current.map((message) => {
+      const approval = message?.meta?.approval
+      if (!approval || Number(approval.id || 0) !== approvalId) {
+        return message
+      }
+      const nextStatus = decision === 'approve' ? 'approved' : (decision === 'reject' ? 'rejected' : 'expired')
+      return {
+        ...message,
+        meta: {
+          ...(message.meta || {}),
+          approval: {
+            ...approval,
+            status: nextStatus,
+          },
+        },
+      }
+    })
+    messagesBySession.value = {
+      ...messagesBySession.value,
+      [sessionId]: next,
+    }
   }
 
   function cancelCurrentStream(sessionId = currentSessionId.value) {
@@ -744,6 +798,10 @@ export const useChatStore = defineStore('chat', () => {
     if (controller) {
       controller.abort()
       streamAbortControllers.delete(sessionId)
+      updateSessionRuntime(sessionId, current => ({
+        ...current,
+        streaming: false,
+      }))
     }
   }
 
@@ -780,6 +838,7 @@ export const useChatStore = defineStore('chat', () => {
     sendMessage,
     retryLastMessage,
     refreshCurrentSession,
+    applyApprovalDecisionLocal,
     cancelCurrentStream,
     pickAndUploadFile,
   }

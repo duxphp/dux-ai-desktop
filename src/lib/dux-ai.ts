@@ -410,13 +410,22 @@ export class DuxAiClient {
 
 function normalizeMessage(item: ChatMessage): ChatMessage {
   const content = normalizeContent(item.content)
+  const meta = item.meta && typeof item.meta === 'object' ? { ...item.meta } : {}
+
   return {
     ...item,
     content,
+    meta,
   }
 }
 
 function normalizeContent(content: ChatMessage['content']): ChatMessage['content'] {
+  if (content && typeof content === 'object' && !Array.isArray(content)) {
+    const part = content as any
+    if (part.type === 'card' || part.type === 'text' || part.type === 'image_url' || part.type === 'file_url' || part.type === 'video_url') {
+      return [part as ChatContentPart]
+    }
+  }
   if (Array.isArray(content)) {
     return content.map((part) => {
       if (!part || typeof part !== 'object') {
@@ -517,9 +526,6 @@ export function decomposeContent(content: ChatMessage['content']) {
     if (part.type === 'file_url') {
       attachments.push({ kind: 'file', url: part.file_url.url, name: part.file_url.name || '文件', mimeType: part.file_url.mime_type || '' })
       continue
-    }
-    if (part.type === 'card') {
-      attachments.push({ kind: 'card', card: part.card })
     }
   }
   return {

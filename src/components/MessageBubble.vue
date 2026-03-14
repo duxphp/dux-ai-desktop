@@ -9,10 +9,12 @@ import { pushToast } from '../lib/toast'
 
 const props = defineProps<{
   message: any
+  approvalSubmittingKey?: string
 }>()
 
 const emit = defineEmits<{
   retry: []
+  cardAction: [button: any]
 }>()
 
 const hovering = ref(false)
@@ -30,8 +32,41 @@ const roleLabel = computed(() => roleLabelMap[props.message.role] || props.messa
 const isUser = computed(() => props.message.role === 'user')
 const attachments = computed(() => Array.isArray(props.message.attachments) ? props.message.attachments : [])
 const mediaAttachments = computed(() => attachments.value.filter((item: any) => item?.kind === 'image' || item?.kind === 'video'))
-const fileAttachments = computed(() => attachments.value.filter((item: any) => item?.kind === 'file' || item?.kind === 'card'))
-const rawText = computed(() => String(props.message.displayText || props.message.content || ''))
+const fileAttachments = computed(() => attachments.value.filter((item: any) => item?.kind === 'file'))
+const approvalStatus = computed(() => String(props.message.meta?.approval?.status || ''))
+const approvalData = computed(() => {
+  if (props.message.role !== 'assistant') {
+    return null
+  }
+  return (props.message.meta?.approval && typeof props.message.meta.approval === 'object') ? props.message.meta.approval : null
+})
+const approvalRequest = computed(() => approvalData.value?.request && typeof approvalData.value.request === 'object' ? approvalData.value.request : {})
+const approvalAction = computed(() => String(approvalData.value?.action_name || approvalData.value?.tool_name || ''))
+const approvalRisk = computed(() => String(approvalData.value?.risk_level || ''))
+const approvalSummary = computed(() => String(approvalData.value?.summary || ''))
+const approvalHint = computed(() => String(approvalData.value?.hint || ''))
+const approvalCommand = computed(() => {
+  const request = approvalRequest.value as any
+  const payload = request?.actions?.[0]?.parsed?.payload || request?.payload || {}
+  if (payload && typeof payload === 'object') {
+    if (payload.command) {
+      return String(payload.command)
+    }
+    if (payload.payload && typeof payload.payload === 'object' && payload.payload.command) {
+      return String(payload.payload.command)
+    }
+  }
+  return ''
+})
+const rawText = computed(() => {
+  if (typeof props.message.displayText === 'string') {
+    return props.message.displayText
+  }
+  if (typeof props.message.content === 'string') {
+    return props.message.content
+  }
+  return ''
+})
 const normalizedText = computed(() => {
   let value = rawText.value
   if (!value.trim()) {
@@ -62,6 +97,85 @@ const html = computed(() => {
   const rendered = marked.parse(normalizedText.value)
   return typeof rendered === 'string' ? rendered : ''
 })
+
+function buttonKey(button: any) {
+  return `${String(button?.approval_id || '')}:${String(button?.text || button?.decision || button?.label || '')}`
+}
+
+function isApprovalButton(button: any) {
+  return String(button?.type || '').toLowerCase() === 'approval-reply'
+}
+
+function isButtonDisabled(button: any) {
+  if (isApprovalButton(button)) {
+    return ((!!props.approvalSubmittingKey && approvalIdValue(button) !== '' && props.approvalSubmittingKey.startsWith(`${approvalIdValue(button)}:`))
+      || (!!approvalStatus.value && approvalStatus.value !== 'pending'))
+  }
+  return false
+}
+
+function isButtonSubmitting(button: any) {
+  return isApprovalButton(button)
+    && !!props.approvalSubmittingKey
+    && props.approvalSubmittingKey === buttonKey(button)
+}
+
+function approvalIdValue(button: any) {
+  return String(button?.approval_id || props.message?.meta?.approval?.id || '')
+}
+
+function buttonClass(button: any) {
+  if (isApprovalButton(button)) {
+    const text = String(button?.text || '').trim()
+    if (!!approvalStatus.value && approvalStatus.value !== 'pending') {
+      return 'opacity-45 cursor-not-allowed'
+    }
+    if (text === '同意') {
+      return 'btn-primary'
+    }
+    if (text === '拒绝') {
+      return 'btn-danger'
+    }
+  }
+  return ''
+}
+
+function approvalStatusLabel(status: string) {
+  switch (status) {
+    case 'approved':
+      return '已同意'
+    case 'rejected':
+      return '已拒绝'
+    case 'expired':
+      return '已过期'
+    case 'pending':
+      return '待审批'
+    default:
+      return status
+  }
+}
+
+function approvalStatusClass(status: string) {
+  switch (status) {
+    case 'approved':
+      return 'border-emerald-500/25 bg-emerald-500/10 text-emerald-500'
+    case 'rejected':
+      return 'border-rose-500/25 bg-rose-500/10 text-rose-500'
+    case 'expired':
+      return 'border-slate-500/25 bg-slate-500/10 text-slate-400'
+    case 'pending':
+      return 'border-amber-500/25 bg-amber-500/10 text-amber-500'
+    default:
+      return 'border-app bg-[color:color-mix(in_srgb,var(--app-panel-2)_94%,transparent)] text-app-muted'
+  }
+}
+
+async function handleCardButtonClick(button: any) {
+  if (isButtonDisabled(button)) {
+    return
+  }
+  emit('cardAction', button)
+}
 
 async function setCopiedState(message = '已复制到剪贴板') {
   copied.value = true
@@ -268,6 +382,50 @@ async function handleContextMenu(event: MouseEvent) {
           </div>
         </div>
 
+        <div v-if="approvalData" class="mt-3 space-y-3">
+          <div class="text-app text-sm font-semibold">执行审批</div>
+          <div v-if="approvalSummary" class="text-app-muted text-xs leading-5">{{ approvalSummary }}</div>
+          <div class="mt-3 space-y-1.5 text-sm">
+            <div class="flex items-start justify-between gap-3">
+              <div class="text-app-soft">动作</div>
+              <div class="text-app text-right">{{ approvalAction || '-' }}</div>
+            </div>
+            <div class="flex items-start justify-between gap-3">
+              <div class="text-app-soft">风险</div>
+              <div class="text-app text-right">{{ approvalRisk || '-' }}</div>
+            </div>
+            <div v-if="approvalCommand" class="flex items-start justify-between gap-3">
+              <div class="text-app-soft">命令</div>
+              <div class="text-app text-right break-all">{{ approvalCommand }}</div>
+            </div>
+            <div class="flex items-start justify-between gap-3">
+              <div class="text-app-soft">审批状态</div>
+              <div class="inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold" :class="approvalStatusClass(approvalStatus || 'pending')">
+                {{ approvalStatusLabel(approvalStatus || 'pending') }}
+              </div>
+            </div>
+          </div>
+          <div v-if="approvalHint && (approvalStatus === 'pending' || !approvalStatus)" class="mt-3 text-xs text-app-muted leading-5">
+            {{ approvalHint }}
+          </div>
+          <div v-if="approvalStatus === 'pending' || !approvalStatus" class="mt-3 flex flex-wrap justify-end gap-2">
+            <button
+              class="btn-muted rounded-full px-3 py-1.5 text-xs font-medium btn-primary"
+              :disabled="isButtonDisabled({ type: 'approval-reply', approval_id: approvalData?.id, text: '同意' })"
+              @click="handleCardButtonClick({ type: 'approval-reply', approval_id: approvalData?.id, text: '同意' })"
+            >
+              {{ isButtonSubmitting({ type: 'approval-reply', approval_id: approvalData?.id, text: '同意' }) ? '处理中…' : '同意' }}
+            </button>
+            <button
+              class="btn-muted rounded-full px-3 py-1.5 text-xs font-medium btn-danger"
+              :disabled="isButtonDisabled({ type: 'approval-reply', approval_id: approvalData?.id, text: '拒绝' })"
+              @click="handleCardButtonClick({ type: 'approval-reply', approval_id: approvalData?.id, text: '拒绝' })"
+            >
+              {{ isButtonSubmitting({ type: 'approval-reply', approval_id: approvalData?.id, text: '拒绝' }) ? '处理中…' : '拒绝' }}
+            </button>
+          </div>
+        </div>
+
         <div v-if="fileAttachments.length" class="mt-3 flex flex-wrap gap-2">
           <div
             v-for="file in fileAttachments"
@@ -283,10 +441,10 @@ async function handleContextMenu(event: MouseEvent) {
       </div>
 
       <div class="message-copy-row" :class="isUser ? 'justify-end' : 'justify-start'">
-        <button
-          v-if="isError"
-          class="btn-danger message-copy-btn"
-          aria-label="重试消息"
+          <button
+            v-if="isError"
+            class="btn-danger message-copy-btn"
+            aria-label="重试消息"
           @click="emit('retry')"
         >
           <IconRefresh class="h-4 w-4" stroke="1.9" />
